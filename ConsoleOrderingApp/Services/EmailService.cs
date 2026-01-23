@@ -3,72 +3,108 @@ using System.Net;
 using System.Net.Mail;
 using DotNetEnv;
 
-namespace ConsoleOrderingApp.Services;
-
-public class EmailService
+namespace ConsoleOrderingApp.Services
 {
-    private readonly string smtpHost;
-    private readonly int smtpPort;
-    private readonly string senderEmail;
-    private readonly string senderPassword;
-
-    public EmailService()
+    public interface ISmtpClient : IDisposable
     {
-        // Load .env from current directory (should be bin/Debug/net8.0)
-        DotNetEnv.Env.Load();
-
-        Console.WriteLine("SMTP_HOST from .env: " + DotNetEnv.Env.GetString("SMTP_HOST"));
-
-        smtpHost = Env.GetString("SMTP_HOST")
-            ?? throw new InvalidOperationException("SMTP_HOST not set in .env");
-        string portStr = Env.GetString("SMTP_PORT")
-            ?? throw new InvalidOperationException("SMTP_PORT not set in .env");
-
-        if (!int.TryParse(portStr, out smtpPort))
-            throw new InvalidOperationException("SMTP_PORT must be a valid number");
-
-        senderEmail = Env.GetString("SMTP_EMAIL")
-            ?? throw new InvalidOperationException("SMTP_EMAIL not set in .env");
-
-        senderPassword = Env.GetString("SMTP_PASSWORD")
-            ?? throw new InvalidOperationException("SMTP_PASSWORD not set in .env");
+        NetworkCredential Credentials { get; set; }
+        bool EnableSsl { get; set; }
+        void Send(MailMessage message);
     }
 
-    public void SendOrderReceipt(Order order, string recipientEmail)
+    public class SmtpClientWrapper : ISmtpClient
     {
-        if (string.IsNullOrWhiteSpace(recipientEmail))
-            throw new ArgumentException("Recipient email cannot be null or empty", nameof(recipientEmail));
+        private readonly SmtpClient _client;
 
-        using var client = new SmtpClient(smtpHost, smtpPort)
+        public SmtpClientWrapper(string host, int port)
         {
-            Credentials = new NetworkCredential(senderEmail, senderPassword),
-            EnableSsl = true
-        };
+            _client = new SmtpClient(host, port);
+        }
 
-        var mailMessage = new MailMessage
+        public NetworkCredential Credentials
         {
-            From = new MailAddress(senderEmail),
-            Subject = $"Order Receipt - {order.Product.Name}",
-            Body = GenerateBody(order)
-        };
+            get => _client.Credentials as NetworkCredential ?? new NetworkCredential();
+            set => _client.Credentials = value;
+        }
 
-        mailMessage.To.Add(recipientEmail);
+        public bool EnableSsl
+        {
+            get => _client.EnableSsl;
+            set => _client.EnableSsl = value;
+        }
 
-        client.Send(mailMessage);
+        public void Send(MailMessage message)
+        {
+            _client.Send(message);
+        }
+
+        public void Dispose()
+        {
+            _client.Dispose();
+        }
     }
 
-    private string GenerateBody(Order order)
+    public interface IEmailService
     {
-        return
-$@"Hello {order.User.Username},
+        void SendOrderReceipt(Order order, string recipientEmail);
+    }
 
-Thank you for your order!
+    public class EmailService : IEmailService
+    {
+        private readonly string smtpHost;
+        private readonly int smtpPort;
+        private readonly string senderEmail;
+        private readonly string senderPassword;
+        private readonly Func<ISmtpClient> _smtpClientFactory;
 
-Product: {order.Product.Name}
-Quantity: {order.Quantity}
-Total: ${order.Total}
+        public EmailService(Func<ISmtpClient>? smtpClientFactory = null)
+        {
+            Env.Load();
 
-Have a great day!
-";
+            smtpHost = Env.GetString("SMTP_HOST") ?? throw new InvalidOperationException("SMTP_HOST not set in .env");
+            string portStr = Env.GetString("SMTP_PORT") ?? throw new InvalidOperationException("SMTP_PORT not set in .env");
+            if (!int.TryParse(portStr, out smtpPort))
+                throw new InvalidOperationException("SMTP_PORT must be a valid number");
+
+            senderEmail = Env.GetString("SMTP_EMAIL") ?? throw new InvalidOperationException("SMTP_EMAIL not set in .env");
+            senderPassword = Env.GetString("SMTP_PASSWORD") ?? throw new InvalidOperationException("SMTP_PASSWORD not set in .env");
+
+            _smtpClientFactory = smtpClientFactory ?? (() => new SmtpClientWrapper(smtpHost, smtpPort));
+        }
+
+        public void SendOrderReceipt(Order order, string recipientEmail)
+        {
+            if (string.IsNullOrWhiteSpace(recipientEmail))
+                throw new ArgumentException("Recipient email cannot be null or empty", nameof(recipientEmail));
+
+            using var client = _smtpClientFactory();
+            client.Credentials = new NetworkCredential(senderEmail, senderPassword);
+            client.EnableSsl = true;
+
+            var mailMessage = new MailMessage
+            {
+                From = new MailAddress(senderEmail),
+                Subject = $"Order Receipt - {order.Product.Name}",
+                Body = GenerateBody(order)
+            };
+            mailMessage.To.Add(recipientEmail);
+
+            client.Send(mailMessage);
+        }
+
+        private string GenerateBody(Order order)
+        {
+            return
+                    $@"Hello {order.User.Username},
+
+                    Thank you for your order!
+
+                    Product: {order.Product.Name}
+                    Quantity: {order.Quantity}
+                    Total: ${order.Total}
+
+                    Have a great day!
+                    ";
+        }
     }
 }

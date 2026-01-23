@@ -7,15 +7,20 @@ namespace ConsoleOrderingApp.Services;
 
 public class ProductService
 {
-    // Returns all products that have stock
-    public List<Product> GetAvailableProducts()
+    private readonly List<Product> _products;
+
+    public ProductService(List<Product>? products = null)
     {
-        return SeedData.Products.Where(p => p.Stock > 0).ToList();
+        _products = products ?? SeedData.Products;
     }
 
-    // Get product by ID
+    public List<Product> GetAvailableProducts()
+    {
+        return _products.Where(p => p.Stock > 0).ToList();
+    }
+
     public Product? GetById(int id)
     {
-        return SeedData.Products.FirstOrDefault(p => p.Id == id);
+        return _products.FirstOrDefault(p => p.Id == id);
     }
 }
