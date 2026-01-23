@@ -1,14 +1,18 @@
 ﻿using ConsoleOrderingApp.Services;
-using DotNetEnv;
+using ConsoleOrderingApp.Config;
 
 var authService = new AuthService();
 var productService = new ProductService();
 var orderService = new OrderService();
 
-Env.Load();
-Console.WriteLine("SMTP_HOST from .env: " + Env.GetString("SMTP_HOST"));
+var emailConfig = new SmtpConfig();
+using var smtpClient = new SmtpClientWrapper(
+    emailConfig.SmtpHost,
+    emailConfig.SmtpPort
+);
 
-// --- Login ---
+var emailService = new EmailService(emailConfig, smtpClient);
+
 Console.Write("Enter username: ");
 var username = Console.ReadLine();
 var user = authService.Login(username ?? "");
@@ -21,14 +25,12 @@ if (user == null)
 
 Console.WriteLine($"Login successful! Welcome, {user.Username}");
 
-// --- List Products ---
 Console.WriteLine("\nAvailable products:");
 foreach (var product in productService.GetAvailableProducts())
 {
     Console.WriteLine($"{product.Id}. {product.Name} - ${product.Price} (Stock: {product.Stock})");
 }
 
-// --- Select Product ---
 Console.Write("\nSelect product ID: ");
 if (!int.TryParse(Console.ReadLine(), out int productId))
 {
@@ -43,7 +45,6 @@ if (selectedProduct == null)
     return;
 }
 
-// --- Enter Quantity ---
 Console.Write("Enter quantity: ");
 if (!int.TryParse(Console.ReadLine(), out int quantity))
 {
@@ -51,7 +52,6 @@ if (!int.TryParse(Console.ReadLine(), out int quantity))
     return;
 }
 
-// --- Create Order ---
 try
 {
     var order = orderService.CreateOrder(user, selectedProduct, quantity);
@@ -63,7 +63,6 @@ try
     Console.WriteLine($"Total: ${order.Total}");
     Console.WriteLine("----------------");
 
-    var emailService = new EmailService();
     try
     {
         emailService.SendOrderReceipt(order, user.Email);
