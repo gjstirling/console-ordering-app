@@ -1,26 +1,34 @@
 ﻿using ConsoleOrderingApp.Data;
-using ConsoleOrderingApp.Models;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace ConsoleOrderingApp.Services;
 
-public class ProductService
-{
-    private readonly List<Product> _products;
-
-    public ProductService(List<Product>? products = null)
+    public class ProductService
     {
-        _products = products ?? SeedData.Products;
-    }
+        private readonly IProductRepository _productRepo;
 
-    public List<Product> GetAvailableProducts()
-    {
-        return _products.Where(p => p.Stock > 0).ToList();
-    }
+        public ProductService(IProductRepository productRepo)
+        {
+            _productRepo = productRepo;
+        }
 
-    public Product? GetById(int id)
-    {
-        return _products.FirstOrDefault(p => p.Id == id);
+        public List<Product> GetAvailableProducts()
+        {
+            return _productRepo.GetAll()
+                               .Where(p => p.Stock > 0)
+                               .ToList();
+        }
+
+        public Product? GetById(int id)
+        {
+            return _productRepo.GetById(id);
+        }
+
+        public void RestockProduct(int productId, int amount)
+        {
+            var product = _productRepo.GetById(productId);
+            if (product is null) return;
+
+            product.Stock += amount;
+            _productRepo.Update(product);
+        }
     }
-}

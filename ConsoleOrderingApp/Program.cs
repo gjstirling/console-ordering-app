@@ -1,8 +1,17 @@
-﻿using ConsoleOrderingApp.Services;
-using ConsoleOrderingApp.Config;
+﻿using ConsoleOrderingApp.Config;
+using ConsoleOrderingApp.Data;
+using ConsoleOrderingApp.Services;
+
+IProductRepository productRepo = new InMemoryProductRepository();
+
+productRepo.Add(new Product { Id = 1, Name = "Laptop", Price = 999.99m, Stock = 10 });
+productRepo.Add(new Product { Id = 2, Name = "Smartphone", Price = 499.99m, Stock = 15 });
+productRepo.Add(new Product { Id = 3, Name = "Headphones", Price = 89.99m, Stock = 0 });
+productRepo.Add(new Product { Id = 4, Name = "Keyboard", Price = 49.99m, Stock = 25 });
+productRepo.Add(new Product { Id = 5, Name = "Mouse", Price = 29.99m, Stock = 30 });
 
 var authService = new AuthService();
-var productService = new ProductService();
+var productService = new ProductService(productRepo);
 var orderService = new OrderService();
 
 var emailConfig = new SmtpConfig();
