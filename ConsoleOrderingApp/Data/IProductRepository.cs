@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace ConsoleOrderingApp.Data;
 
-namespace ConsoleOrderingApp.Data
-{
-    public interface IProductRepository
+public interface IProductRepository
     {
         Product? GetById(int id);
         IEnumerable<Product> GetAll();
@@ -15,7 +9,7 @@ namespace ConsoleOrderingApp.Data
         void Delete(int id);
     }
 
-    public class InMemoryProductRepository : IProductRepository
+public class InMemoryProductRepository : IProductRepository
     {
         private readonly List<Product> _products = new();
 
@@ -28,6 +22,4 @@ namespace ConsoleOrderingApp.Data
             if (index >= 0) _products[index] = product;
         }
         public void Delete(int id) => _products.RemoveAll(p => p.Id == id);
-    }
-
-}
+    } 
