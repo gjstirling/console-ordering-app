@@ -1,6 +1,6 @@
 ﻿using ConsoleOrderingApp.Services;
 
-namespace ConsoleOrderingApp.Tests
+namespace ConsoleOrderingApp.Tests.NewFolder
 {
     public class AuthServiceTests
     {

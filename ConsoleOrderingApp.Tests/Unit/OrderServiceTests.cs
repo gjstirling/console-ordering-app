@@ -1,7 +1,7 @@
 ﻿using ConsoleOrderingApp.Services;
 using ConsoleOrderingApp.Models;
 
-namespace ConsoleOrderingApp.Tests
+namespace ConsoleOrderingApp.Tests.NewFolder
 {
     public class OrderServiceTests
     {

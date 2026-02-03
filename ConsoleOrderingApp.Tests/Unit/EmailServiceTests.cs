@@ -5,7 +5,7 @@ using Moq;
 using System.Net.Mail;
 using Xunit;
 
-namespace ConsoleOrderingApp.Tests;
+namespace ConsoleOrderingApp.Tests.NewFolder;
 
 public class EmailServiceTests
 {
